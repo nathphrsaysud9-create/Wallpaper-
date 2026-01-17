@@ -1,21 +1,110 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>PURPLE NIGHT</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
+<script>
+const canvas = document.getElementById("cityCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = 800;
+canvas.height = 600;
 
-<div id="scene">
-  <img id="city" src="city.png" />
-  <canvas id="fx"></canvas>
+/* โหลดรูป */
+const cityImg = new Image();
+cityImg.src = "city.png";
 
-  <img id="ghost" src="ghost.png" />
+const ghostImg = new Image();
+ghostImg.src = "ghost.png";
 
-  <div id="opening">PURPLE NIGHT</div>
-</div>
+/* ตัวแปร */
+let rainEnabled = true;
+let lightningEnabled = true;
 
-<script src="script.js"></script>
-</body>
-</html>
+let time = 0;
+
+/* ฝน */
+const raindrops = Array.from({ length: 350 }, () => ({
+  x: Math.random() * canvas.width,
+  y: Math.random() * canvas.height,
+  speed: Math.random() * 6 + 4,
+  len: Math.random() * 18 + 10,
+}));
+
+/* ฟ้าแลบ */
+let lightnings = [];
+
+function spawnLightning() {
+  if (!lightningEnabled) return;
+  if (Math.random() < 0.025) {
+    let x = Math.random() * canvas.width;
+    let y = 0;
+    let path = [];
+    while (y < canvas.height * 0.7) {
+      path.push({ x, y });
+      x += Math.random() * 40 - 20;
+      y += Math.random() * 40;
+    }
+    lightnings.push({ path, life: 6 });
+  }
+}
+
+/* วาด */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* เมือง */
+  ctx.drawImage(cityImg, 0, 0, canvas.width, canvas.height);
+
+  /* ไฟเมืองกระพริบ */
+  ctx.fillStyle = `rgba(180,120,255,${Math.random() * 0.05})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  /* ตัวละคร ghost */
+  const ghostY = 380 + Math.sin(time * 0.02) * 6;
+  const sway = Math.sin(time * 0.03) * 0.03;
+
+  ctx.save();
+  ctx.translate(400, ghostY);
+  ctx.rotate(sway);
+  ctx.drawImage(ghostImg, -70, -90, 140, 180);
+  ctx.restore();
+
+  /* ฝน */
+  if (rainEnabled) {
+    ctx.strokeStyle = "rgba(200,150,255,0.6)";
+    raindrops.forEach(r => {
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x - 5, r.y + r.len);
+      ctx.stroke();
+
+      r.x += 1;
+      r.y += r.speed;
+
+      if (r.y > canvas.height) {
+        /* splash */
+        ctx.beginPath();
+        ctx.arc(r.x, canvas.height - 20, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        r.y = -20;
+        r.x = Math.random() * canvas.width;
+      }
+    });
+  }
+
+  /* ฟ้าแลบ */
+  spawnLightning();
+  lightnings.forEach((l, i) => {
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    l.path.forEach((p, idx) => {
+      if (idx === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    l.life--;
+    if (l.life <= 0) lightnings.splice(i, 1);
+  });
+
+  time++;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
